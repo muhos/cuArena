@@ -264,21 +264,39 @@ namespace cuArena {
             std::lock_guard<std::mutex> lock(_mutex);
             return _gpu_stable_allocated;
         }
+        size_t gpu_stable_available () const noexcept {
+            std::lock_guard<std::mutex> lock(_mutex);
+            size_t freed = 0;
+            for (auto& [ptr, sz] : _gpu_stable_free_by_addr)
+                freed += sz;
+            return _stable_cap + freed;
+        }
+        // Same as gpu_stable_available() when unfragmented,
+        // but much smaller when fragmented.
+        size_t gpu_stable_largest_free_block() const noexcept {
+            std::lock_guard<std::mutex> lock(_mutex);
+            size_t largest = _stable_cap;
+            for (const auto& [ptr, sz] : _gpu_stable_free_by_addr)
+                largest = std::max(largest, sz);
+            return largest;
+        }
 
-
-        size_t gpu_used     () const noexcept {
+        size_t gpu_dynamic_used     () const noexcept {
+            std::lock_guard<std::mutex> lock(_mutex);
+            return _gpu_allocated;
+        }
+        size_t gpu_used             () const noexcept {
             std::lock_guard<std::mutex> lock(_mutex);
             return _gpu_allocated + _gpu_stable_allocated;
         }
 
-        size_t gpu_available() const noexcept {
+        size_t gpu_available        () const noexcept {   // dynamic region
             std::lock_guard<std::mutex> lock(_mutex);
             size_t freed = 0;
             for (auto& [ptr, sz] : _gpu_free_by_addr)
                 freed += sz;
             return _gpool.cap + freed;
         }
-
         // Same as gpu_available() when unfragmented, 
         // but much smaller when fragmented.
         size_t gpu_largest_free_block() const noexcept {

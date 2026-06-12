@@ -493,7 +493,17 @@ namespace cuArena {
             if (static_cast<byte_t*>(prev->first) + prev->second == static_cast<byte_t*>(fit->first)) {
                 prev->second += fit->second;
                 _gpu_stable_free_by_addr.erase(fit);
+                fit = prev;
             }
+        }
+
+        // If the coalesced block touches the pool tail, return it to the
+        // tail so future allocations of any size can use it contiguously.
+        if (static_cast<byte_t*>(fit->first) + fit->second ==
+            static_cast<byte_t*>(_gpool.mem) + _stable_off) {
+            _stable_off -= fit->second;
+            _stable_cap += fit->second;
+            _gpu_stable_free_by_addr.erase(fit);
         }
     }
 
