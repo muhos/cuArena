@@ -106,7 +106,6 @@ namespace cuArena {
             _gpu_stable_free_by_addr.clear();
             _gpu_stable_alloc_list.clear();
             _gpu_stable_allocated = 0;
-            _gpu_peak = 0;
             _stable_off   = 0;
             _stable_cap   = 0;
             _stable_size  = 0;
@@ -139,7 +138,6 @@ namespace cuArena {
             _gpu_stable_free_by_addr.clear();
             _gpu_stable_alloc_list.clear();
             _gpu_stable_allocated = 0;
-            _gpu_peak = 0;
             CUARENA_FREE(_gpool.mem, _gstream);
             cudaStreamSynchronize(_gstream);
             _gpool = Pool{};
