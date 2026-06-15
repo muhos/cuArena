@@ -106,6 +106,7 @@ namespace cuArena {
             _gpu_stable_free_by_addr.clear();
             _gpu_stable_alloc_list.clear();
             _gpu_stable_allocated = 0;
+            _gpu_peak = 0;
             _stable_off   = 0;
             _stable_cap   = 0;
             _stable_size  = 0;
@@ -138,6 +139,7 @@ namespace cuArena {
             _gpu_stable_free_by_addr.clear();
             _gpu_stable_alloc_list.clear();
             _gpu_stable_allocated = 0;
+            _gpu_peak = 0;
             CUARENA_FREE(_gpool.mem, _gstream);
             cudaStreamSynchronize(_gstream);
             _gpool = Pool{};
@@ -404,6 +406,7 @@ namespace cuArena {
         if (ptr) {
             _gpu_alloc_list.emplace(ptr, out_size);
             _gpu_allocated += out_size;
+            _gpu_peak = std::max(_gpu_peak, _gpu_allocated + _gpu_stable_allocated);
             return ptr;
         }
         if (aligned_bytes > _gpool.cap) {
@@ -416,6 +419,7 @@ namespace cuArena {
         _gpool.cap -= aligned_bytes;
         _gpu_alloc_list.emplace(ptr, aligned_bytes);
         _gpu_allocated += aligned_bytes;
+        _gpu_peak = std::max(_gpu_peak, _gpu_allocated + _gpu_stable_allocated);
         return ptr;
     }
 
@@ -449,6 +453,7 @@ namespace cuArena {
                 }
                 _gpu_stable_alloc_list.emplace(block, block_size);
                 _gpu_stable_allocated += block_size;
+                _gpu_peak = std::max(_gpu_peak, _gpu_allocated + _gpu_stable_allocated);
                 return block;
             }
         }
@@ -464,6 +469,7 @@ namespace cuArena {
         _stable_cap -= aligned_bytes;
         _gpu_stable_alloc_list.emplace(ptr, aligned_bytes);
         _gpu_stable_allocated += aligned_bytes;
+        _gpu_peak = std::max(_gpu_peak, _gpu_allocated + _gpu_stable_allocated);
         return ptr;
     }
 
@@ -497,8 +503,6 @@ namespace cuArena {
             }
         }
 
-        // If the coalesced block touches the pool tail, return it to the
-        // tail so future allocations of any size can use it contiguously.
         if (static_cast<byte_t*>(fit->first) + fit->second ==
             static_cast<byte_t*>(_gpool.mem) + _stable_off) {
             _stable_off -= fit->second;

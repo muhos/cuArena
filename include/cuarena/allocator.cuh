@@ -67,6 +67,7 @@ namespace cuArena {
         size_t _gtot = 0, _gfree_mem = 0, _glimit = 0;
         size_t _ctot = 0, _cfree_mem = 0, _climit = 0;
         size_t _gpu_allocated = 0, _cpu_allocated = 0;
+        size_t _gpu_peak = 0;
         cudaStream_t  _gstream = 0;
         GPUMemoryType _gtype = GPUMemoryType::Device;
         CPUMemoryType _ctype = CPUMemoryType::Pinned;
@@ -290,6 +291,11 @@ namespace cuArena {
             return _gpu_allocated + _gpu_stable_allocated;
         }
 
+        size_t gpu_peak_used        () const noexcept {
+            std::lock_guard<std::mutex> lock(_mutex);
+            return _gpu_peak;
+        }
+
         size_t gpu_available        () const noexcept {   // dynamic region
             std::lock_guard<std::mutex> lock(_mutex);
             size_t freed = 0;
@@ -297,6 +303,7 @@ namespace cuArena {
                 freed += sz;
             return _gpool.cap + freed;
         }
+
         // Same as gpu_available() when unfragmented, 
         // but much smaller when fragmented.
         size_t gpu_largest_free_block() const noexcept {
